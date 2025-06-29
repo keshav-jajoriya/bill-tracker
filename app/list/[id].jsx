@@ -4,13 +4,13 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StyleSheet
 } from 'react-native';
 import {
   Button,
   Card,
   Divider,
+  Snackbar,
   Text,
   TextInput,
 } from 'react-native-paper';
@@ -23,6 +23,8 @@ export default function ListDetailScreen() {
   const navigation = useNavigation();
 
   const [item, setItem] = useState({ name: '', price: '', quantity: '' });
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -30,7 +32,9 @@ export default function ListDetailScreen() {
     });
   }, [list, navigation]);
 
-  if (!list) return <Text style={styles.errorText}>List not found</Text>;
+  if (!list) {
+    return <Text style={styles.errorText}>List not found</Text>;
+  }
 
   const handleAddItem = () => {
     const newItem = {
@@ -41,7 +45,8 @@ export default function ListDetailScreen() {
     };
 
     if (!newItem.name || isNaN(newItem.price) || isNaN(newItem.quantity)) {
-      alert('Please fill all fields correctly');
+      setSnackbarMessage('Please fill all fields correctly');
+      setSnackbarVisible(true);
       return;
     }
 
@@ -55,11 +60,11 @@ export default function ListDetailScreen() {
   );
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      {/* <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}> */}
+    <>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <Text variant="headlineSmall" style={styles.title}>
           {list.title}
         </Text>
@@ -88,7 +93,7 @@ export default function ListDetailScreen() {
           mode="outlined"
         />
         <Button mode="contained" onPress={handleAddItem} style={styles.button}>
-          <Text style={{ color: '#333333' }}>Add Item</Text>
+          <Text style={styles.buttonText}>Add Item</Text>
         </Button>
 
         <Divider style={styles.divider} />
@@ -96,7 +101,7 @@ export default function ListDetailScreen() {
         <Text variant="titleMedium" style={styles.totalText}>
           Total: ₹{totalListAmount.toFixed(2)}
         </Text>
-        <ScrollView keyboardShouldPersistTaps="handled">
+
         <FlatList
           data={list.items}
           keyExtractor={(_, index) => index.toString()}
@@ -120,10 +125,19 @@ export default function ListDetailScreen() {
             <Text style={styles.emptyList}>No items added yet.</Text>
           }
           style={{ marginTop: 10 }}
+          contentContainerStyle={{ paddingBottom: 30 }}
         />
-        </ScrollView>
-      {/* </ScrollView> */}
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+        style={styles.snackbar}
+      >
+        <Text style={styles.snackbarText}>{snackbarMessage}</Text>
+      </Snackbar>
+    </>
   );
 }
 
@@ -133,16 +147,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#1e1e1e',
     padding: 10,
   },
+  title: {
+    color: '#ffffff',
+    marginBottom: 10,
+  },
   input: {
     marginBottom: 10,
     backgroundColor: '#2c2c2c',
   },
   button: {
     marginBottom: 20,
-    backgroundColor: '#ffffff'
+    backgroundColor: '#ffffff',
+  },
+  buttonText: {
+    color: '#333333',
+    fontWeight: '600',
   },
   divider: {
-    marginVertical: 10,
+    marginBottom: 10,
+    marginTop: 0,
+    backgroundColor: '#444',
+  },
+  totalText: {
+    color: '#ffffff',
+    marginBottom: 10,
   },
   card: {
     backgroundColor: '#2c2c2c',
@@ -150,6 +178,7 @@ const styles = StyleSheet.create({
   },
   cardText: {
     color: '#ffffff',
+    fontWeight: '600',
   },
   cardSubText: {
     color: '#cccccc',
@@ -157,16 +186,8 @@ const styles = StyleSheet.create({
   },
   cardDate: {
     marginTop: 4,
-    opacity: 0.5,
+    opacity: 0.6,
     color: '#aaa',
-  },
-  title: {
-    color: '#ffffff',
-    marginBottom: 10,
-  },
-  totalText: {
-    color: '#ffffff',
-    marginBottom: 10,
   },
   emptyList: {
     color: '#888',
@@ -178,5 +199,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 40,
     fontSize: 18,
+  },
+  snackbar: {
+    backgroundColor: '#1e1e1e',
+    borderColor: '#c90e0e',
+    borderWidth: 1,
+  },
+  snackbarText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
