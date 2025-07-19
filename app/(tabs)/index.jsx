@@ -32,6 +32,7 @@ export default function HomeScreen() {
   const { lists = [], addList, deleteList } = useContext(BillingContext);
 
   const [title, setTitle] = useState("");
+  const [address, setAddress] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -42,7 +43,7 @@ export default function HomeScreen() {
   const navigation = useNavigation();
 
   useLayoutEffect(() => {
-    navigation.setOptions({ title: "Create Your List" });
+    navigation.setOptions({ title: "Create bill" });
   }, [navigation]);
 
   const showSnackbar = (message) => {
@@ -53,8 +54,8 @@ export default function HomeScreen() {
   const isValidListTitle = (input) => {
     const trimmed = input.trim();
     if (trimmed.length < 3) return "Title must be at least 3 characters";
-    if (trimmed.length > 50) return "Title must be under 50 characters";
-    if (!/^[a-zA-Z0-9 _-]+$/.test(trimmed))
+    if (trimmed.length > 80) return "Title must be under 80 characters";
+    if (!/^[a-zA-Z0-9 _.,-]+$/.test(trimmed))
       return "Only letters, numbers, spaces, dashes, and underscores allowed";
     if (
       lists.some((list) => list.title.toLowerCase() === trimmed.toLowerCase())
@@ -69,8 +70,9 @@ export default function HomeScreen() {
       showSnackbar(error);
     } else {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      addList(title.trim());
+      addList(title.trim(), address.trim());
       setTitle("");
+      setAddress("");
     }
   };
 
@@ -139,9 +141,16 @@ export default function HomeScreen() {
     <>
       <View style={styles.container}>
         <TextInput
-          label="New Billing List"
+          label="Customer Name"
           value={title}
           onChangeText={setTitle}
+          mode="outlined"
+          style={styles.input}
+        />
+        <TextInput
+          label="Customer Address (Optional)"
+          value={address}
+          onChangeText={setAddress}
           mode="outlined"
           style={styles.input}
         />
@@ -177,11 +186,13 @@ export default function HomeScreen() {
                     style={styles.sortButton}
                   >
                     Sort:{" "}
-                    {{
-                      az: "A–Z",
-                      za: "Z–A",
-                      recent: "Recent",
-                    }[sortOption]}
+                    {
+                      {
+                        az: "A–Z",
+                        za: "Z–A",
+                        recent: "Recent",
+                      }[sortOption]
+                    }
                   </Button>
                 }
                 contentStyle={styles.menuContent}
@@ -228,22 +239,27 @@ export default function HomeScreen() {
         <FlatList
           data={filteredLists}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.listItem}>
-              <Button
-                mode="outlined"
-                onPress={() => router.push(ROUTES.listDetail(item.id))}
-                style={styles.listTitleButton}
-              >
-                {highlightMatch(item.title, searchQuery)}
-              </Button>
-              <IconButton
-                icon="trash-can-outline"
-                iconColor="#fff"
-                containerColor="#444"
-                size={22}
-                onPress={() => handleDelete(item.id)}
-              />
+          renderItem={({ item, index }) => (
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              <Text style={{ color: "#bbb" }}>{index + 1}</Text>
+              <View style={styles.listItem}>
+                <Button
+                  mode="outlined"
+                  style={styles.listTitleButton}
+                  onPress={() => router.push(ROUTES.listDetail(item.id))}
+                >
+                  {highlightMatch(item.title, searchQuery)}
+                </Button>
+                <IconButton
+                  icon="trash-can-outline"
+                  iconColor="#fff"
+                  containerColor="#444"
+                  size={22}
+                  onPress={() => handleDelete(item.id)}
+                />
+              </View>
             </View>
           )}
           contentContainerStyle={{ paddingBottom: 30 }}
@@ -274,9 +290,10 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: "#2c2c2c",
+    marginBottom: 10,
   },
   searchInput: {
-    marginTop: 20,
+    marginTop: 10,
     backgroundColor: "#2c2c2c",
     height: 40,
   },
@@ -287,7 +304,7 @@ const styles = StyleSheet.create({
   sortButton: {
     borderColor: "#555",
     backgroundColor: "#2c2c2c",
-    borderRadius: 8
+    borderRadius: 8,
   },
   menuContent: {
     backgroundColor: "#2c2c2c",
@@ -319,11 +336,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    width: "calc(100% - 16px)",
   },
   listTitleButton: {
     flex: 1,
-    borderColor: "#fff",
+    borderColor: "#777",
     borderRadius: 8,
+    marginInline: "0px",
   },
   listTitleText: {
     fontWeight: "600",

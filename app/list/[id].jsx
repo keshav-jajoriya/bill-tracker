@@ -1,11 +1,13 @@
-import { useLocalSearchParams, useNavigation } from 'expo-router';
-import React, { useContext, useLayoutEffect, useState } from 'react';
+import { ROUTES } from "@/utils/routes";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
+import React, { useContext, useEffect, useLayoutEffect, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  StyleSheet
-} from 'react-native';
+  StyleSheet,
+  View,
+} from "react-native";
 import {
   Button,
   Card,
@@ -13,8 +15,8 @@ import {
   Snackbar,
   Text,
   TextInput,
-} from 'react-native-paper';
-import { BillingContext } from '../../context/BillingContext';
+} from "react-native-paper";
+import { BillingContext } from "../../context/BillingContext";
 
 export default function ListDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -22,15 +24,41 @@ export default function ListDetailScreen() {
   const list = lists.find((l) => l.id === id);
   const navigation = useNavigation();
 
-  const [item, setItem] = useState({ name: '', price: '', quantity: '' });
+  const [item, setItem] = useState({ name: "", price: "", quantity: "", total: "" });
   const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+
+  const [billDate, setBillDate] = useState("");
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: list ? list.title : 'Billing List',
+      title: "Product List",
     });
   }, [list, navigation]);
+
+  useEffect(() => {
+    const MONTHS = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    if (list?.dateCreated) {
+      const date = new Date(list.dateCreated);
+      const formattedDate = `${date.getDate()} ${
+        MONTHS[date.getMonth()]
+      } ${date.getFullYear()}`;
+      setBillDate(formattedDate);
+    }
+  }, [list]);
 
   if (!list) {
     return <Text style={styles.errorText}>List not found</Text>;
@@ -41,17 +69,18 @@ export default function ListDetailScreen() {
       ...item,
       price: parseFloat(item.price),
       quantity: parseInt(item.quantity),
-      date: new Date().toISOString(),
+      total: (parseFloat(item.price) * parseInt(item.quantity)).toFixed(2),
+      name: item.name.trim(),
     };
 
     if (!newItem.name || isNaN(newItem.price) || isNaN(newItem.quantity)) {
-      setSnackbarMessage('Please fill all fields correctly');
+      setSnackbarMessage("Please fill all fields correctly");
       setSnackbarVisible(true);
       return;
     }
 
     addItemToList(list.id, newItem);
-    setItem({ name: '', price: '', quantity: '' });
+    setItem({ name: "", price: "", quantity: "", total: "" });
   };
 
   const totalListAmount = list.items.reduce(
@@ -63,38 +92,62 @@ export default function ListDetailScreen() {
     <>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <Text variant="headlineSmall" style={styles.title}>
           {list.title}
         </Text>
 
+        <Text variant="headlineSmall" style={styles.dateCreated}>
+          DATE - <b>{billDate}</b>
+        </Text>
+
         <TextInput
-          label="Item Name"
+          label="Product Name"
           value={item.name}
           onChangeText={(t) => setItem({ ...item, name: t })}
           style={styles.input}
           mode="outlined"
         />
-        <TextInput
-          label="Price"
-          keyboardType="numeric"
-          value={item.price}
-          onChangeText={(t) => setItem({ ...item, price: t })}
-          style={styles.input}
-          mode="outlined"
-        />
-        <TextInput
-          label="Quantity"
-          keyboardType="numeric"
-          value={item.quantity}
-          onChangeText={(t) => setItem({ ...item, quantity: t })}
-          style={styles.input}
-          mode="outlined"
-        />
-        <Button mode="contained" onPress={handleAddItem} style={styles.button}>
-          <Text style={styles.buttonText}>Add Item</Text>
-        </Button>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            label="Price"
+            keyboardType="numeric"
+            value={item.price}
+            onChangeText={(t) => setItem({ ...item, price: t })}
+            style={styles.input2}
+            mode="outlined"
+          />
+          <TextInput
+            label="Quantity"
+            keyboardType="numeric"
+            value={item.quantity}
+            onChangeText={(t) => setItem({ ...item, quantity: t })}
+            style={styles.input2}
+            mode="outlined"
+          />
+        </View>
+
+        <View style={styles.buttonContainer}>
+          {list?.items?.length !== 0 && (
+            <Button
+              mode="contained"
+              onPress={() => router.push(ROUTES.PdfPreview(id))}
+              style={styles.pdfButton}
+            >
+              <Text style={styles.pdfButtonText}>Create PDF</Text>
+            </Button>
+          )}
+
+          <Button
+            mode="contained"
+            onPress={handleAddItem}
+            style={styles.button}
+          >
+            <Text style={styles.buttonText}>Add Item</Text>
+          </Button>
+        </View>
 
         <Divider style={styles.divider} />
 
@@ -112,11 +165,8 @@ export default function ListDetailScreen() {
                   {item.name}
                 </Text>
                 <Text variant="bodySmall" style={styles.cardSubText}>
-                  ₹{item.price} × {item.quantity} = ₹
+                  ₹{item.price} × Q.{item.quantity} = ₹
                   {(item.price * item.quantity).toFixed(2)}
-                </Text>
-                <Text variant="labelSmall" style={styles.cardDate}>
-                  {new Date(item.date).toLocaleString()}
                 </Text>
               </Card.Content>
             </Card>
@@ -144,69 +194,97 @@ export default function ListDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: "#1e1e1e",
     padding: 10,
   },
   title: {
-    color: '#ffffff',
+    color: "#ffffff",
+    // marginBottom: 10,
+  },
+  dateCreated: {
+    color: "#dededeff",
     marginBottom: 10,
+    fontSize: 14,
   },
   input: {
     marginBottom: 10,
-    backgroundColor: '#2c2c2c',
+    backgroundColor: "#2c2c2c",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    width: "100%",
+  },
+  input2: {
+    width: "calc(50% - 5px)",
+    marginBottom: 15,
+    backgroundColor: "#2c2c2c",
+  },
+  buttonContainer: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 10,
   },
   button: {
-    marginBottom: 20,
-    backgroundColor: '#ffffff',
+    marginBottom: 10,
+    backgroundColor: "#ffffff",
   },
   buttonText: {
-    color: '#333333',
-    fontWeight: '600',
+    color: "#333333",
+    fontWeight: "600",
+  },
+  pdfButton: {
+    marginBottom: 10,
+    backgroundColor: "#fe3839",
+  },
+  pdfButtonText: {
+    color: "#ffffff",
+    fontWeight: "600",
   },
   divider: {
-    marginBottom: 10,
+    marginBottom: "10px",
     marginTop: 0,
-    backgroundColor: '#444',
+    backgroundColor: "#444",
   },
   totalText: {
-    color: '#ffffff',
-    marginBottom: 10,
+    color: "#ffffff",
+    marginBottom: 0,
+    textAlign: "right",
   },
   card: {
-    backgroundColor: '#2c2c2c',
+    backgroundColor: "#2c2c2c",
     marginBottom: 10,
   },
   cardText: {
-    color: '#ffffff',
-    fontWeight: '600',
+    color: "#ffffff",
+    fontWeight: "600",
   },
   cardSubText: {
-    color: '#cccccc',
+    color: "#cccccc",
     marginTop: 4,
-  },
-  cardDate: {
-    marginTop: 4,
-    opacity: 0.6,
-    color: '#aaa',
   },
   emptyList: {
-    color: '#888',
-    textAlign: 'center',
+    color: "#888",
+    textAlign: "center",
     marginTop: 20,
   },
   errorText: {
-    color: 'red',
-    textAlign: 'center',
+    color: "red",
+    textAlign: "center",
     marginTop: 40,
     fontSize: 18,
   },
   snackbar: {
-    backgroundColor: '#1e1e1e',
-    borderColor: '#c90e0e',
+    backgroundColor: "#1e1e1e",
+    borderColor: "#c90e0e",
     borderWidth: 1,
   },
   snackbarText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
   },
 });
